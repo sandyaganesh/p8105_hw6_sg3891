@@ -83,7 +83,7 @@ Considering an alpha of 0.05 for significance, our model now contains  statistic
 I also looked at all of the significant predictors to ensure they are variables  used in the literature when looking at birth outcomes. Factors relating to the mother such as maternal race and height, as well as factors relating to the baby such as sex and length often appear in the literature, so I feel comfortable including them. Additionally, the literature shows that smoking during pregnancy can cause a lot of malformations in children and can affect birthweight as well, so it makes sense to include number of cigarettes smoked as a predictor.
 
 Plot of model residuals against fitted values
-```{r}
+```{r resid_plot}
 model1 = lm(bwt ~ menarche + fincome + smoken, data = birthweight)
 
 model1 %>% broom::tidy() %>% knitr::kable(digits = 3)
