@@ -7,7 +7,9 @@ output: github_document
 
 ```{r setup, echo = FALSE, message = FALSE}
 library(tidyverse)
-library(p8105.datasets)
+library(dplyr)
+library(modelr)
+library(mgcv)
 
 knitr::opts_chunk$set(
   fig.height = 6,
@@ -27,25 +29,98 @@ scale_fill_discrete = scale_fill_viridis_d
 ```
 ## Question 1
 
-Load and clean data for regression analyses. Here, we will convert numeric to factor variables and check for missing data.
+#### Load and clean the birthweight data for regression analyses. 
 ```{r}
 birthweight = 
-  read_csv("./data/birthweight.csv") %>%
+  read_csv("./data/birthweight.csv")
+
+skimr::skim(birthweight)
+```
+Looking into this data set, we can see that the total number of observations  is `r nrow(birthweight)` observations with `r ncol(birthweight)` variables. The dataset includes variables such as `r names(birthweight %>% select(c(1,2,3,4,5,6)))`. 
+Additionally, all of the variables are numeric and there are no missing values.
+
+Next, we will convert numeric to factor variables.
+```{r}
+birthweight = birthweight %>% 
   mutate(
     babysex = factor(babysex),
-    babysex = fct_recode(babysex, "male" = '1', "female" = '2')
-  )
+    babysex = fct_recode(babysex, "male" = '1', "female" = '2'),
+    frace = factor(frace),
+    frace = fct_recode(frace,
+                       "White" = '1',
+                       "Black" = '2',
+                       "Asian" = '3',
+                       "Puerto Rican" = '4',
+                       "Other" = '8',
+                       "Unknown" = '9'),
+    malform = factor(malform),
+    malform = fct_recode(malform,
+                         "absent" = '0',
+                         "present" = '1'),
+    mrace = factor(mrace),
+    mrace = fct_recode(mrace,
+                       "White" = '1',
+                       "Black" = '2',
+                       "Asian" = '3',
+                       "Puerto Rican" = '4',
+                       "Other" = '8')
+     )
 ```
+
+Model 1: 
+I will build my model using backwards selection, and validating the predictors we are including using the current literature and my hypotheses. For the backwards selection, we will start with a fully saturated model, and then run backwards selection to remove all non-significant predictors.
+
+```{r}
+model1 = lm(bwt ~ ., data = birthweight) %>% 
+  MASS::stepAIC(direction = "backward", trace = FALSE)
+
+model1 %>% broom::tidy() %>% knitr::kable(digits = 3)
+```
+Considering an alpha of 0.05 for significance, our model now contains  statistically significant predictors of baby's birthweight, except for fincome (family's monthly income). To validate whether this predictor should be included though it is not statistically significant, I looked into the literature, and found that family income is positively associated with baby's birthweight, with lower incomes predicting lower birthweights. This makes sense, as income can affect nutrition of the mother during pregnancy and other social determinants of health.
+
+I also looked at all of the significant predictors to ensure they are variables  used in the literature when looking at birth outcomes. Factors relating to the mother such as maternal race and height, as well as factors relating to the baby such as sex and length often appear in the literature, so I feel comfortable including them. Additionally, the literature shows that smoking during pregnancy can cause a lot of malformations in children and can affect birthweight as well, so it makes sense to include number of cigarettes smoked as a predictor.
+
+Plot of model residuals against fitted values (any nonlinearity, trends, non constant residual variance)
+```{r}
+model1 = lm(bwt ~ menarche + fincome + smoken, data = birthweight)
+
+model1 %>% broom::tidy() %>% knitr::kable(digits = 3)
+
+add_residuals(birthweight, model1) %>% add_predictions(model1) %>% 
+  ggplot(aes(x = resid, y = pred)) + geom_point(alpha = 0.5) +
+  labs(x = "Predicted Birthweight (g)",
+       y = "Residuals",
+       title = "Relationship between Predicted Birthweight and Residuals")
+```
+### Additional Models and Cross Validation
 
 Model with length at birth and gestational age as predictors
 ```{r}
-model2 = lm(bwt ~ blength + gaweeks, data = birthweight)
+model2 = lm(bwt ~ 
+              blength + gaweeks, 
+              data = birthweight)
 
 ```
 
 Model with head circumference, length, sex, and all interactions as predictors
 ```{r}
-model3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birthweight)
-
+model3 = lm(bwt ~ 
+              bhead + blength + babysex + 
+              bhead * blength + bhead * babysex + blength * babysex + 
+              bhead * blength * babysex, 
+              data = birthweight)
 ```
 
+In order to do the cross validation, we will first create the crossv_mc tibble with the train and test data
+```{r}
+cv_df = crossv_mc(birthweight, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+```
+
+Next, we will fit the models and get the root mean squared errors
+```{r}
+
+```
