@@ -82,7 +82,7 @@ Considering an alpha of 0.05 for significance, our model now contains  statistic
 
 I also looked at all of the significant predictors to ensure they are variables  used in the literature when looking at birth outcomes. Factors relating to the mother such as maternal race and height, as well as factors relating to the baby such as sex and length often appear in the literature, so I feel comfortable including them. Additionally, the literature shows that smoking during pregnancy can cause a lot of malformations in children and can affect birthweight as well, so it makes sense to include number of cigarettes smoked as a predictor.
 
-Plot of model residuals against fitted values (any nonlinearity, trends, non constant residual variance)
+Plot of model residuals against fitted values
 ```{r}
 model1 = lm(bwt ~ menarche + fincome + smoken, data = birthweight)
 
@@ -165,9 +165,96 @@ fitted_df %>%
   )
   
 ```
+
+
 From the plot above, we can see that the RSMEs are on average lowest for model 1, then model 3, and finally model 2 has the highest RSME values. This shows that model 1, the model that I have created using the backwards selection and literature searches, is the best choice in terms of prediction error, as it minimizes the average distance between the actual birth weight and the predicted birthweight. The model that I have selected includes no interaction terms, as opposed to model 3. The predictors in my final model (model 1) are sex of the baby, head circumference, baby length, delivery weight, family income, gestational age, mother's height, mother's race, parity, pre-pregnancy weight, and number of cigarettes smoked.
 
 ## Question 2
 
+First, we will download the 2017 Central Park weather data
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
 
+We will draw 5000 bootstrap samples and produce estimates of the quantiles.
+We will work on a simple linear regression model, with tmax as the outcome and tmin as the predictor.
+
+#### R squared coefficient of determination
+```{r rsquared}
+boot_straps_r_weather =
+  weather_df %>% 
+  modelr::bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm( tmax ~ tmin, data = .x) ),
+    results = map(models, broom::glance)) %>%
+  select(-strap, -models) %>% 
+  unnest(results)
+  
+boot_straps_r_weather %>% 
+  janitor::clean_names() %>% 
+  summarize(
+    lower_limit = quantile(r_squared, c(.025)),
+    upper_limit = quantile(r_squared, c(.975))) %>% 
+  knitr::kable()
+
+boot_straps_r_weather %>% 
+  ggplot(aes(x = r.squared)) + 
+  geom_density() +
+  labs(
+    x = "R Squared Values",
+    y = "Density",
+    title = "Distribution of R-Squared estimates for Central Park Weather"
+  ) 
+  
+```
+We can see that the distribution of the R-squared data is relatively normally distributed.
+The 95% CI for the r-squared values is (0.894, 0.927), as seen in the table above.
+
+#### Log(B0*B1) 
+```{r logb0b1}
+boot_straps_log_weather =
+  weather_df %>% 
+  modelr::bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm( tmax ~ tmin, data = .x) ),
+    results = map(models, broom::tidy)) %>%
+  select(-strap, -models) %>% 
+  unnest(results) %>% 
+  janitor::clean_names() %>%
+  select(id, term, estimate) %>% 
+  pivot_wider(
+    names_from = "term",
+    values_from = "estimate"
+  ) %>% 
+  rename(intercept = '(Intercept)') %>% 
+  mutate(log_b0b1 = log(intercept*tmin))
+
+boot_straps_log_weather %>% 
+  summarize(
+    lower_limit = quantile(log_b0b1, c(.025)),
+    upper_limit = quantile(log_b0b1, c(.975))) %>% 
+  knitr::kable()
+
+boot_straps_log_weather %>% 
+  ggplot(aes(x = log_b0b1)) + 
+  geom_density() +
+  labs(
+    x = "Log(B0*B1)",
+    y = "Density",
+    title = "Distribution of Log(B0*B1) estimates for Central Park Weather"
+  ) 
+```
+
+We can see that the distribution of the log(B0*B1) data is relatively normally distributed.
+The 95% CI for the r-squared values is (1.966, 2.058), as seen in the table above.
 
