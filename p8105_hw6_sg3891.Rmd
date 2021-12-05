@@ -69,6 +69,7 @@ birthweight = birthweight %>%
      )
 ```
 
+#### My Model (Model 1)
 Model 1: 
 I will build my model using backwards selection, and validating the predictors we are including using the current literature and my hypotheses. For the backwards selection, we will start with a fully saturated model, and then run backwards selection to remove all non-significant predictors.
 
@@ -82,18 +83,18 @@ Considering an alpha of 0.05 for significance, our model now contains  statistic
 
 I also looked at all of the significant predictors to ensure they are variables  used in the literature when looking at birth outcomes. Factors relating to the mother such as maternal race and height, as well as factors relating to the baby such as sex and length often appear in the literature, so I feel comfortable including them. Additionally, the literature shows that smoking during pregnancy can cause a lot of malformations in children and can affect birthweight as well, so it makes sense to include number of cigarettes smoked as a predictor.
 
-Plot of model residuals against fitted values
+Therefore, the predictors in my model (model 1) are sex of the baby, head circumference, baby length, delivery weight, family income, gestational age, mother's height, mother's race, parity, pre-pregnancy weight, and number of cigarettes smoked.
+
+#### Plot of model residuals against fitted values
 ```{r resid_plot}
-model1 = lm(bwt ~ menarche + fincome + smoken, data = birthweight)
-
-model1 %>% broom::tidy() %>% knitr::kable(digits = 3)
-
 add_residuals(birthweight, model1) %>% add_predictions(model1) %>% 
   ggplot(aes(x = resid, y = pred)) + geom_point(alpha = 0.5) +
   labs(x = "Predicted Birthweight (g)",
        y = "Residuals",
        title = "Relationship between Predicted Birthweight and Residuals")
 ```
+
+Looking at the comparison between predicted birthweight and the residuals, we can see that there are some clear outliers, but the majority of data has similar residual spread.
 
 #### Additional Models and Cross Validation
 
@@ -171,6 +172,7 @@ From the plot above, we can see that the RSMEs are on average lowest for model 1
 
 ## Question 2
 
+#### Load Weather Data
 First, we will download the 2017 Central Park weather data
 ```{r}
 weather_df = 
@@ -217,8 +219,8 @@ boot_straps_r_weather %>%
   ) 
   
 ```
-We can see that the distribution of the R-squared data is relatively normally distributed.
-The 95% CI for the r-squared values is (0.894, 0.927), as seen in the table above.
+We can see that the distribution of the $\hat{r}^{2}$ data is relatively normally distributed, and is centered around 0.915.
+The 95% CI for the $\hat{r}^{2}$ values is (0.894, 0.927), as seen in the table above.
 
 #### Log(B0*B1) 
 ```{r logb0b1}
@@ -255,6 +257,7 @@ boot_straps_log_weather %>%
   ) 
 ```
 
-We can see that the distribution of the log(B0*B1) data is relatively normally distributed.
-The 95% CI for the r-squared values is (1.966, 2.058), as seen in the table above.
+
+We can see that the distribution of the $\log(\hat{\beta}_{0} * \hat{\beta}_{1})$ data is relatively normally distributed, and is centered around 2.02
+The 95% CI for the $\log(\hat{\beta}_{0} * \hat{\beta}_{1})$ values is (1.966, 2.058), as seen in the table above.
 
